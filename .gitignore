@@ -16,19 +16,6 @@ node_modules/
 dist/
 .vite/
 
-# Terraform
-.terraform/
-*.tfstate
-*.tfstate.*
-*.tfvars
-*.tfvars.json
-crash.log
-override.tf
-override.tf.json
-
-# AWS
-.aws/
-
 # OS
 .DS_Store
 Thumbs.db

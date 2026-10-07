@@ -1,17 +1,17 @@
 from fastapi import FastAPI
 
-from app.config.settings import settings
-
 
 app = FastAPI(
-    title=settings.app_name,
+    title="Digital Footprint Exposure Scanner",
     version="0.1.0",
+    description="Privacy-first digital exposure assessment and cleanup assistant.",
 )
 
 
 @app.get("/health")
 def health():
     return {
-        "status": "ok",
-        "environment": settings.environment,
+        "status": "healthy",
+        "service": "digital-footprint-scanner",
+        "version": "0.1.0",
     }

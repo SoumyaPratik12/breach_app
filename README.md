@@ -1,6 +1,6 @@
-# Digital Footprint Exposure Scanner & Cleanup Assistant
+# Digital Footprint Exposure Scanner
 
-A privacy-first digital exposure assessment and remediation platform.
+A privacy-first digital exposure assessment and cleanup assistant.
 
 ## Objective
 
@@ -19,43 +19,61 @@ Help users understand where their verified digital identifiers may have appeared
 - No guarantee of deletion from criminal sources
 - Explicit coverage limitations
 
-## MVP
+## Target stack
 
-- User authentication
-- Email and phone ownership verification
-- Identifier vault
-- Breach exposure scan
-- Provider abstraction
-- Exposure dashboard
-- Risk scoring
-- Keep List
-- Cleanup plan
-- Request tracker
-- Password exposure check
-- Security controls
-- Automated testing
-- AWS deployment
+```text
+React + Vite
+      ↓
+FastAPI
+      ↓
+SQLite
+      ↓
+Background scan worker
+      ↓
+Provider abstraction
+      ├── Mock provider
+      └── HIBP adapter
+```
 
-## Architecture
+The first version runs locally in a Codespace. It does not require Docker,
+Redis, PostgreSQL, Terraform, or AWS services.
 
-React/Vite
-→ API Gateway
-→ AWS Lambda
-→ DynamoDB
+## Phase 0: project foundation
 
-Asynchronous scans:
+- Python 3.12 and Node.js 22 development container
+- FastAPI health endpoint at `/health`
+- React/Vite product shell
+- Backend tests and frontend production build
 
-API Gateway
-→ Lambda
-→ SQS
-→ Scan Worker
-→ Intelligence Provider
-→ Risk Engine
-→ DynamoDB
+Run the backend from `backend/`:
+
+```bash
+source .venv/bin/activate
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Run the backend tests from `backend/`:
+
+```bash
+pytest -q
+```
+
+Run the frontend from `frontend/`:
+
+```bash
+npm install
+npm run dev -- --host 0.0.0.0
+```
+
+Build the frontend from `frontend/`:
+
+```bash
+npm run build
+```
 
 ## Security
 
-Passwords never enter the backend.
+Passwords should never enter the backend.
 
 Identifiers are normalized and protected using HMAC where possible.
 
