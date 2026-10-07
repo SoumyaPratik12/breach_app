@@ -1,0 +1,15 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    app_name: str = "Digital Footprint Exposure Scanner"
+    environment: str = "dev"
+    aws_region: str = "ap-south-1"
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore",
+    )
+
+
+settings = Settings()
