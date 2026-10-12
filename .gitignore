@@ -26,3 +26,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Local application database and data
+/backend/data/
