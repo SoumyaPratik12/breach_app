@@ -34,12 +34,11 @@ class IdentifierCreateRequest(BaseModel):
             except ValidationError as exc:
                 raise ValueError("A valid email address is required") from exc
         elif identifier_type == IdentifierType.PHONE:
-            phone_value = value.strip()
-            if re.fullmatch(r"\+?[0-9\s().-]+", phone_value) is None:
+            if re.fullmatch(r"\+?[0-9 ()-]+", value) is None:
                 raise ValueError("Phone number contains unsupported characters")
 
             digit_count = sum(
-                character in "0123456789" for character in phone_value
+                character in "0123456789" for character in value
             )
             if not 7 <= digit_count <= 15:
                 raise ValueError(

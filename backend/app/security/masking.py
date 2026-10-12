@@ -12,7 +12,7 @@ def mask_identifier(
             return f"{local[0]}•••••@{domain}"
         return "••••"
     if identifier_type == IdentifierType.PHONE:
-        digits = "".join(char for char in value if char.isdigit())
+        digits = "".join(char for char in value if "0" <= char <= "9")
         if len(digits) <= 4:
             return "••••"
         prefix = "+" if value.strip().startswith("+") else ""
