@@ -1,3 +1,4 @@
+from cryptography.fernet import Fernet
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -5,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 DEFAULT_JWT_SECRET = "dev-only-jwt-secret-change-in-production"
 DEFAULT_OTP_SECRET = "dev-only-otp-hmac-secret-change-in-production"
 DEFAULT_IDENTIFIER_SECRET = "dev-only-identifier-hmac-secret"
+DEFAULT_IDENTIFIER_ENCRYPTION_KEY = ""
 
 
 class Settings(BaseSettings):
@@ -16,6 +18,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60
     otp_hmac_secret: str = DEFAULT_OTP_SECRET
     identifier_hmac_secret: str = DEFAULT_IDENTIFIER_SECRET
+    identifier_encryption_key: str = DEFAULT_IDENTIFIER_ENCRYPTION_KEY
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -30,6 +33,17 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "Development OTP exposure must be disabled in production"
                 )
+            if not self.identifier_encryption_key:
+                raise ValueError(
+                    "identifier_encryption_key must be explicitly configured "
+                    "in production"
+                )
+            try:
+                Fernet(self.identifier_encryption_key.encode("ascii"))
+            except (ValueError, UnicodeEncodeError) as exc:
+                raise ValueError(
+                    "identifier_encryption_key must be a valid Fernet key"
+                ) from exc
             secrets_to_check = {
                 "jwt_secret": self.jwt_secret,
                 "otp_hmac_secret": self.otp_hmac_secret,

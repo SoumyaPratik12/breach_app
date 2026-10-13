@@ -13,6 +13,7 @@ from pydantic import (
 )
 
 from app.models.identifier import IdentifierType, VerificationStatus
+from app.security.identifier_encryption import decrypt_identifier
 from app.security.masking import mask_identifier
 
 
@@ -57,7 +58,7 @@ class IdentifierResponse(BaseModel):
 
     @field_serializer("display_value")
     def serialize_display_value(self, value: str) -> str:
-        return mask_identifier(self.type, value)
+        return mask_identifier(self.type, decrypt_identifier(value))
 
 
 class OTPRequestResponse(BaseModel):

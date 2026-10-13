@@ -1,3 +1,6 @@
+from app.models import Identifier
+
+
 def register_and_authenticate(client, email):
     response = client.post(
         "/auth/register",
@@ -11,7 +14,7 @@ def register_and_authenticate(client, email):
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_create_identifier_returns_masked_email(client):
+def test_create_identifier_returns_masked_email(client, db_session):
     headers = register_and_authenticate(
         client, "mask-test@example.com"
     )
@@ -26,6 +29,8 @@ def test_create_identifier_returns_masked_email(client):
     assert response.status_code == 201, response.text
     assert response.json()["display_value"] == "s•••••@example.com"
     assert response.json()["display_value"] != "sammy@example.com"
+    stored_identifier = db_session.query(Identifier).one()
+    assert stored_identifier.display_value.startswith("enc:v1:")
 
 
 def test_list_identifiers_returns_masked_email(client):

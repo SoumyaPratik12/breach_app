@@ -4,9 +4,21 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from cryptography.fernet import Fernet
+
+from app.config.settings import settings
 from app.db.database import Base, get_db
 from app.main import app
 from app import models  # Ensure all model tables are registered.
+
+
+@pytest.fixture(autouse=True)
+def configure_identifier_encryption_key(monkeypatch):
+    monkeypatch.setattr(
+        settings,
+        "identifier_encryption_key",
+        Fernet.generate_key().decode("ascii"),
+    )
 
 
 @pytest.fixture

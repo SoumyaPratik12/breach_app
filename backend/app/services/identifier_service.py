@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.config.settings import settings
 from app.models import Identifier, IdentifierType, VerificationStatus
 from app.security.crypto import generate_identifier_hmac
+from app.security.identifier_encryption import encrypt_identifier
 
 
 def normalize_identifier(
@@ -80,7 +81,7 @@ def create_identifier(
         user_id=user_id,
         type=identifier_type,
         value_hmac=value_hmac,
-        display_value=value.strip(),
+        display_value=encrypt_identifier(value.strip()),
         verification_status=VerificationStatus.PENDING,
     )
 

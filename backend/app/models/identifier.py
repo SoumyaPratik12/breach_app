@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from uuid import uuid4
 
-from sqlalchemy import DateTime, Enum as SQLEnum, ForeignKey, String
+from sqlalchemy import DateTime, Enum as SQLEnum, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.database import Base
@@ -48,7 +48,7 @@ class Identifier(Base):
     )
 
     display_value: Mapped[str] = mapped_column(
-        String(320),
+        Text,
         nullable=False,
     )
 
