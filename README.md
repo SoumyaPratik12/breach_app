@@ -101,6 +101,20 @@ the project's explicit `python -m app.db.init_db` setup command before using
 the scan endpoints. This milestone does not run that command or change the live
 database.
 
+If the process stops after persisting a scan as `RUNNING`, the record remains
+in that state until `recover_stale_scans` is explicitly invoked. Recovery is
+not run automatically at application startup, since another worker may still
+be running the scan. In production, invoke it from a single scheduled
+maintenance job using a cutoff older than the provider's enforced maximum run
+time plus a safety margin, and a dedicated database session. Do not enable
+scheduled recovery until provider execution has a defined upper bound.
+
+Scan state commits are rolled back and database exceptions propagated when a
+commit fails. A failure to persist the final result can leave the previously
+committed scan in `RUNNING`; the explicit stale-scan recovery policy handles
+that interrupted state. Simulated findings remain mock examples, not evidence
+of actual exposure.
+
 ## Status
 
 Phase 3 - Simulated exposure-scanning foundation

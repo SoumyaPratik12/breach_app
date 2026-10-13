@@ -1,10 +1,18 @@
 from datetime import datetime, timezone
 
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.config.settings import settings
-from app.models import ExposureScan, Identifier, ScanStatus, VerificationStatus
+from app.models import (
+    ExposureScan,
+    Identifier,
+    ScanStatus,
+    User,
+    VerificationStatus,
+)
 from app.services.scan_provider import ScanProviderError
+from app.services.scan_service import start_scan
 
 
 @pytest.fixture(autouse=True)
@@ -287,3 +295,63 @@ def test_unexpected_provider_failure_does_not_leak_details(
 
     assert response.status_code == 201
     assert response.json()["status"] == "failed"
+
+
+def test_final_scan_commit_failure_rolls_back_and_leaves_scan_recoverable(
+    db_session,
+    monkeypatch,
+):
+    user = User(
+        email="scan-commit-failure@example.com",
+        password_hash="test-hash",
+    )
+    db_session.add(user)
+    db_session.flush()
+    identifier = Identifier(
+        user_id=user.id,
+        type="email",
+        value_hmac="scan-commit-failure-hmac",
+        display_value="encrypted-test-value",
+        verification_status=VerificationStatus.VERIFIED,
+        verified_at=datetime.now(timezone.utc),
+    )
+    db_session.add(identifier)
+    db_session.commit()
+
+    original_commit = db_session.commit
+    original_rollback = db_session.rollback
+    commit_count = 0
+    rollback_count = 0
+
+    def fail_final_commit():
+        nonlocal commit_count
+        commit_count += 1
+        if commit_count == 3:
+            raise SQLAlchemyError("simulated commit failure")
+        original_commit()
+
+    def track_rollback():
+        nonlocal rollback_count
+        rollback_count += 1
+        original_rollback()
+
+    monkeypatch.setattr(db_session, "commit", fail_final_commit)
+    monkeypatch.setattr(db_session, "rollback", track_rollback)
+
+    with pytest.raises(SQLAlchemyError, match="simulated commit failure"):
+        start_scan(
+            db_session,
+            user.id,
+            identifier.id,
+        )
+
+    assert commit_count == 3
+    assert rollback_count == 1
+    db_session.expire_all()
+    persisted_scan = (
+        db_session.query(ExposureScan)
+        .filter(ExposureScan.identifier_id == identifier.id)
+        .one()
+    )
+    assert persisted_scan.status == ScanStatus.RUNNING
+    assert persisted_scan.findings == []

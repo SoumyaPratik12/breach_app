@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.config.settings import settings
@@ -21,6 +22,14 @@ scan_rate_limiter = InMemoryRateLimiter(
     max_attempts=settings.scan_rate_limit_attempts,
     window_seconds=settings.scan_rate_limit_window_seconds,
 )
+
+
+def _commit_or_rollback(db: Session) -> None:
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
 
 
 def start_scan(
@@ -66,12 +75,12 @@ def start_scan(
         findings=[],
     )
     db.add(scan)
-    db.commit()
+    _commit_or_rollback(db)
     db.refresh(scan)
 
     scan.status = ScanStatus.RUNNING
     scan.started_at = datetime.now(timezone.utc)
-    db.commit()
+    _commit_or_rollback(db)
     db.refresh(scan)
 
     try:
@@ -90,7 +99,7 @@ def start_scan(
         scan.status = ScanStatus.COMPLETED
         scan.completed_at = datetime.now(timezone.utc)
 
-    db.commit()
+    _commit_or_rollback(db)
     db.refresh(scan)
     return scan
 
