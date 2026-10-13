@@ -53,3 +53,19 @@ def test_reset_clears_limiter_state():
     limiter.reset()
 
     assert limiter.is_limited("client-a") is False
+
+
+def test_expired_inactive_clients_are_cleaned_up(monkeypatch):
+    current_time = 0.0
+    monkeypatch.setattr(
+        "app.security.login_rate_limiter.monotonic",
+        lambda: current_time,
+    )
+    limiter = LoginRateLimiter(max_attempts=2, window_seconds=10)
+    limiter.record_failure("inactive-client")
+    current_time = 11.0
+    limiter.record_failure("active-client")
+
+    # The inactive client's expired entry should also be removed.
+    assert "inactive-client" not in limiter._attempts
+    assert "active-client" in limiter._attempts

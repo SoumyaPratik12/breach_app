@@ -1,5 +1,5 @@
 from cryptography.fernet import Fernet
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60
     login_rate_limit_attempts: int = 5
     login_rate_limit_window_seconds: int = 900
+    scan_rate_limit_attempts: int = Field(default=5, ge=1)
+    scan_rate_limit_window_seconds: int = Field(default=900, ge=1)
     otp_hmac_secret: str = DEFAULT_OTP_SECRET
     identifier_hmac_secret: str = DEFAULT_IDENTIFIER_SECRET
     identifier_encryption_key: str = DEFAULT_IDENTIFIER_ENCRYPTION_KEY
