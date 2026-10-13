@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from app.config.settings import settings
 from app.db.database import get_db
 from app.models import User
 from app.schemas.auth import (
@@ -11,12 +12,18 @@ from app.schemas.auth import (
 )
 from app.security.auth import get_current_user
 from app.security.jwt import create_access_token
+from app.security.login_rate_limiter import LoginRateLimiter
 from app.security.passwords import hash_password, verify_password
 
 
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"],
+)
+
+login_rate_limiter = LoginRateLimiter(
+    max_attempts=settings.login_rate_limit_attempts,
+    window_seconds=settings.login_rate_limit_window_seconds,
 )
 
 
@@ -66,8 +73,28 @@ def register(
 )
 def login(
     request: LoginRequest,
+    http_request: Request,
     db: Session = Depends(get_db),
 ):
+    client_host = (
+        http_request.client.host
+        if http_request.client is not None
+        else "unknown"
+    )
+    if login_rate_limiter.is_limited(client_host):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                "Too many failed login attempts. "
+                "Please try again later."
+            ),
+            headers={
+                "Retry-After": str(
+                    settings.login_rate_limit_window_seconds
+                )
+            },
+        )
+
     email = request.email.lower().strip()
 
     user = (
@@ -80,6 +107,7 @@ def login(
         request.password,
         user.password_hash,
     ):
+        login_rate_limiter.record_failure(client_host)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",

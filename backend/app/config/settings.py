@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     jwt_secret: str = DEFAULT_JWT_SECRET
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60
+    login_rate_limit_attempts: int = 5
+    login_rate_limit_window_seconds: int = 900
     otp_hmac_secret: str = DEFAULT_OTP_SECRET
     identifier_hmac_secret: str = DEFAULT_IDENTIFIER_SECRET
     identifier_encryption_key: str = DEFAULT_IDENTIFIER_ENCRYPTION_KEY
