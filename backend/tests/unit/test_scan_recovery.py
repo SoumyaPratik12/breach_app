@@ -1,8 +1,10 @@
+import asyncio
 from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
+from app import main as app_main
 from app.models import (
     ExposureScan,
     Identifier,
@@ -146,3 +148,43 @@ def test_recovery_rolls_back_and_propagates_commit_failure(
     persisted_scan = db_session.get(ExposureScan, scan.id)
     assert persisted_scan.status == ScanStatus.RUNNING
     assert persisted_scan.error_code is None
+
+
+def test_startup_recovery_uses_startup_session(monkeypatch):
+    recorded = {}
+
+    class DummySession:
+        def close(self):
+            recorded["closed"] = True
+
+    dummy_session = DummySession()
+
+    def fake_init_db():
+        recorded["init_db_called"] = True
+
+    def fake_recover_stale_scans(db, cutoff):
+        recorded["db"] = db
+        recorded["cutoff"] = cutoff
+
+    def fake_session_local():
+        recorded["session_local_called"] = True
+        return dummy_session
+
+    monkeypatch.setattr(app_main, "init_db", fake_init_db)
+    monkeypatch.setattr(app_main, "recover_stale_scans", fake_recover_stale_scans)
+    monkeypatch.setattr(app_main, "SessionLocal", fake_session_local)
+
+    async def run_lifespan():
+        async with app_main.lifespan(app_main.app):
+            pass
+
+    asyncio.run(run_lifespan())
+
+    assert recorded["init_db_called"] is True
+    assert recorded["session_local_called"] is True
+    assert recorded["db"] is dummy_session
+    assert recorded["closed"] is True
+    expected_cutoff = datetime.now(timezone.utc) - timedelta(
+        minutes=app_main.STALE_SCAN_TIMEOUT_MINUTES
+    )
+    assert abs((recorded["cutoff"] - expected_cutoff).total_seconds()) < 1
