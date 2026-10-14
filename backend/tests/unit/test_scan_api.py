@@ -194,6 +194,41 @@ def test_user_cannot_read_another_users_scan(client, db_session):
     assert response.status_code == 404
 
 
+def test_scan_succeeds_with_empty_findings(
+    client,
+    db_session,
+    monkeypatch,
+):
+    from app.api import scans as scans_api
+
+    class EmptyScanProvider:
+        def scan(self):
+            return []
+
+    monkeypatch.setattr(
+        scans_api,
+        "simulated_scan_provider",
+        EmptyScanProvider(),
+    )
+    headers = register_and_authenticate(client, "scan-empty@example.com")
+    identifier_id = create_identifier(
+        client,
+        headers,
+        "person@example.com",
+    )
+    verify_identifier(db_session, identifier_id)
+
+    response = client.post(
+        f"/identifiers/{identifier_id}/scans",
+        headers=headers,
+    )
+
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert data["status"] == "completed"
+    assert data["findings"] == []
+
+
 def test_provider_failure_is_persisted_without_provider_details(
     client,
     db_session,
