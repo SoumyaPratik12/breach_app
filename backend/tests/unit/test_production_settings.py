@@ -61,3 +61,14 @@ def test_production_accepts_distinct_configured_secrets():
     )
     assert configured.environment == "production"
     assert configured.expose_dev_otp is False
+
+
+@pytest.mark.parametrize("algorithm", ["HS384", "HS512", "none", "invalid"])
+def test_rejects_unsupported_jwt_algorithm(algorithm):
+    with pytest.raises(ValueError, match="jwt_algorithm must be HS256"):
+        Settings(jwt_algorithm=algorithm)
+
+
+def test_accepts_hs256_jwt_algorithm():
+    settings = Settings(jwt_algorithm="HS256")
+    assert settings.jwt_algorithm == "HS256"
