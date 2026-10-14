@@ -172,3 +172,36 @@ def test_otp_request_cooldown(client, monkeypatch):
         headers=headers,
     )
     assert response.status_code == 429
+
+
+def test_new_otp_challenge_invalidates_previous_challenge(
+    client, db_session, monkeypatch
+):
+    enable_test_otp(monkeypatch)
+    headers = register_and_authenticate(
+        client, "otp-replacement@example.com"
+    )
+    identifier_id = create_email_identifier(
+        client, headers, "otp-replacement@example.com"
+    )
+    old_otp = request_otp(client, headers, identifier_id)
+    # Bypass the 60-second cooldown for this controlled test.
+    challenge = (
+        db_session.query(OTPChallenge)
+        .filter(OTPChallenge.identifier_id == identifier_id)
+        .first()
+    )
+    assert challenge is not None
+    challenge.created_at = datetime.now(timezone.utc) - timedelta(
+        seconds=61
+    )
+    db_session.commit()
+    new_otp = request_otp(client, headers, identifier_id)
+    assert new_otp != old_otp
+    # The old OTP must no longer verify the identifier.
+    old_otp_response = client.post(
+        f"/identifiers/{identifier_id}/verify",
+        headers=headers,
+        json={"otp": old_otp},
+    )
+    assert old_otp_response.status_code == 400

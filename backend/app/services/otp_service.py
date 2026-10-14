@@ -1,3 +1,4 @@
+import hmac
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
@@ -114,7 +115,10 @@ def verify_otp(
 
     challenge.attempts += 1
 
-    if hash_otp(otp) != challenge.otp_hash:
+    if not hmac.compare_digest(
+        hash_otp(otp),
+        challenge.otp_hash,
+    ):
         if challenge.attempts >= challenge.max_attempts:
             challenge.used = True
 
