@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 import pytest
+from fastapi import HTTPException
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.config.settings import settings
@@ -355,3 +356,48 @@ def test_final_scan_commit_failure_rolls_back_and_leaves_scan_recoverable(
     )
     assert persisted_scan.status == ScanStatus.RUNNING
     assert persisted_scan.findings == []
+
+
+def test_initial_scan_insert_failure_releases_rate_limit_reservation(
+    db_session,
+    monkeypatch,
+):
+    user = User(
+        email="scan-insert-failure@example.com",
+        password_hash="test-hash",
+    )
+    db_session.add(user)
+    db_session.flush()
+    identifier = Identifier(
+        user_id=user.id,
+        type="email",
+        value_hmac="scan-insert-failure-hmac",
+        display_value="encrypted-test-value",
+        verification_status=VerificationStatus.VERIFIED,
+        verified_at=datetime.now(timezone.utc),
+    )
+    db_session.add(identifier)
+    db_session.commit()
+
+    original_commit = db_session.commit
+    commit_count = 0
+
+    def fail_initial_commit():
+        nonlocal commit_count
+        commit_count += 1
+        if commit_count == 1:
+            raise SQLAlchemyError("simulated initial insert failure")
+        original_commit()
+
+    monkeypatch.setattr(db_session, "commit", fail_initial_commit)
+
+    with pytest.raises(HTTPException) as exc_info:
+        start_scan(db_session, user.id, identifier.id)
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.detail == (
+        "Scan could not be started due to a database error. Please try again."
+    )
+    scan = start_scan(db_session, user.id, identifier.id)
+
+    assert scan.status == ScanStatus.COMPLETED

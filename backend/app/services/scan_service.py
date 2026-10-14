@@ -56,7 +56,8 @@ def start_scan(
             status_code=status.HTTP_409_CONFLICT,
             detail="Identifier must be verified before scanning",
         )
-    if not scan_rate_limiter.consume_if_allowed(user_id):
+    reservation = scan_rate_limiter.reserve_if_allowed(user_id)
+    if reservation is None:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Scan rate limit exceeded. Please try again later.",
@@ -74,8 +75,18 @@ def start_scan(
         is_simulated=True,
         findings=[],
     )
-    db.add(scan)
-    _commit_or_rollback(db)
+    try:
+        db.add(scan)
+        _commit_or_rollback(db)
+    except SQLAlchemyError as exc:
+        scan_rate_limiter.release_attempt(user_id, reservation)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Scan could not be started due to a database error. "
+                "Please try again."
+            ),
+        ) from exc
     db.refresh(scan)
 
     scan.status = ScanStatus.RUNNING

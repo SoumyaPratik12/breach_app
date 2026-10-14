@@ -43,15 +43,32 @@ class InMemoryRateLimiter:
             self._purge_expired(now)
             self._attempts[client_key].append(now)
 
-    def consume_if_allowed(self, client_key: str) -> bool:
+    def reserve_if_allowed(self, client_key: str) -> float | None:
+        """Reserve an attempt and return its token, or None if limited."""
         now = monotonic()
         with self._lock:
             self._purge_expired(now)
             attempts = self._attempts[client_key]
             if len(attempts) >= self.max_attempts:
-                return False
+                return None
             attempts.append(now)
-            return True
+            return now
+
+    def release_attempt(self, client_key: str, token: float) -> None:
+        """Release only the specific reservation that failed."""
+        with self._lock:
+            attempts = self._attempts.get(client_key)
+            if not attempts:
+                return
+            for index, attempt in enumerate(attempts):
+                if attempt == token:
+                    del attempts[index]
+                    break
+            if not attempts:
+                self._attempts.pop(client_key, None)
+
+    def consume_if_allowed(self, client_key: str) -> bool:
+        return self.reserve_if_allowed(client_key) is not None
 
     def reset(self) -> None:
         """Clear state for isolated tests or controlled local resets."""

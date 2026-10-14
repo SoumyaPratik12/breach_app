@@ -96,10 +96,9 @@ to five requests per 15 minutes by default; configure this with
 The scan rate limiter is in-memory, so its state is local to one application
 process and is lost on restart. It is not a security boundary for multi-worker
 or multi-instance deployments; use a shared store before deploying that way.
-Existing SQLite databases need the new `exposure_scans` table created through
-the project's explicit `python -m app.db.init_db` setup command before using
-the scan endpoints. This milestone does not run that command or change the live
-database.
+On application startup, `init_db` creates any missing tables, including
+`exposure_scans`, without deleting existing data. This is table creation only;
+schema changes that require migrations still need a migration process.
 
 If the process stops after persisting a scan as `RUNNING`, the record remains
 in that state until `recover_stale_scans` is explicitly invoked. Recovery is
