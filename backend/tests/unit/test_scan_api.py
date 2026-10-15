@@ -118,6 +118,13 @@ def test_scan_results_are_simulated_and_persisted(
         and finding["verified"] is False
         for finding in scan["prioritized_findings"]
     )
+    assert len(scan["recommendations"]) == 2
+    assert all(
+        recommendation["simulated"] is True
+        and recommendation["verified"] is False
+        and recommendation["advisory_only"] is True
+        for recommendation in scan["recommendations"]
+    )
     assert "person@example.com" not in response.text
 
     persisted = db_session.get(ExposureScan, scan["id"])
@@ -249,6 +256,7 @@ def test_scan_succeeds_with_empty_findings(
         "high": 0,
     }
     assert data["prioritized_findings"] == []
+    assert data["recommendations"] == []
 
 
 def test_provider_failure_is_persisted_without_provider_details(
@@ -286,6 +294,7 @@ def test_provider_failure_is_persisted_without_provider_details(
     assert response.json()["findings"] == []
     assert response.json()["risk_score"] is None
     assert response.json()["risk_level"] == "unavailable"
+    assert response.json()["recommendations"] == []
     assert "sensitive provider diagnostic" not in response.text
     persisted = db_session.get(ExposureScan, response.json()["id"])
     assert persisted is not None
@@ -357,6 +366,7 @@ def test_unexpected_provider_failure_does_not_leak_details(
     assert response.json()["status"] == "failed"
     assert response.json()["risk_score"] is None
     assert response.json()["risk_level"] == "unavailable"
+    assert response.json()["recommendations"] == []
 
 
 def test_final_scan_commit_failure_rolls_back_and_leaves_scan_recoverable(

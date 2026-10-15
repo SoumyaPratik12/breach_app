@@ -71,3 +71,12 @@ class ExposureScanResponse(BaseModel):
         if self.status != ScanStatus.COMPLETED:
             return []
         return self._get_risk_summary()["prioritized_findings"]
+
+    @computed_field
+    @property
+    def recommendations(self) -> list[dict]:
+        if self.status != ScanStatus.COMPLETED:
+            return []
+        from app.risk.recommendations import recommend_for_findings
+
+        return recommend_for_findings(self.findings)
