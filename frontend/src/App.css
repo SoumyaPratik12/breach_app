@@ -502,6 +502,116 @@ form input::placeholder {
   background: #fff;
 }
 
+.risk-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 14px;
+  margin: 18px 0;
+}
+
+.risk-score,
+.severity-count {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 15px;
+  border: 1px solid #e3e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.risk-score strong {
+  font-size: 30px;
+  letter-spacing: -0.04em;
+}
+
+.risk-level {
+  width: fit-content;
+  padding: 5px 9px;
+  border-radius: 20px;
+  background: #edf1f7;
+  color: #34425a;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.risk-high,
+.risk-critical {
+  background: #fde9e9;
+  color: #9a2828;
+}
+
+.risk-medium {
+  background: #fff1d8;
+  color: #80530a;
+}
+
+.risk-low {
+  background: #e7f7ee;
+  color: #176341;
+}
+
+.risk-none {
+  background: #edf1f7;
+  color: #34425a;
+}
+
+.severity-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.severity-count {
+  text-transform: capitalize;
+}
+
+.severity-count strong {
+  font-size: 22px;
+}
+
+.recommendations-section {
+  display: grid;
+  gap: 14px;
+  margin: 24px 0;
+}
+
+.recommendations-section h4 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
+.recommendation-list {
+  display: grid;
+  gap: 12px;
+}
+
+.recommendation-card {
+  display: grid;
+  gap: 10px;
+  padding: 15px;
+  border: 1px solid #e3e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.recommendation-card ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 22px;
+  color: #596579;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 480px) {
+  .risk-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
 .scan-results-header,
 .finding-heading {
   display: flex;

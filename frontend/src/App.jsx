@@ -27,6 +27,7 @@ async function apiRequest(path, options = {}, token = null) {
           ? detail.map((item) => item.msg || "Invalid input").join(", ")
           : `Request failed with status ${response.status}`;
 
+
     throw new Error(message);
   }
 
@@ -533,6 +534,29 @@ function App() {
                     Scan ID: <code>{scan.id}</code>
                   </p>
 
+                  {scan.status === "completed" && (
+                    <section className="risk-summary" aria-label="Risk summary">
+                      <div className="risk-score">
+                        <span className="muted">Risk score</span>
+                        <strong>{scan.risk_score ?? "—"} / 100</strong>
+                        <span className={`risk-level risk-${scan.risk_level}`}>
+                          {scan.risk_level}
+                        </span>
+                      </div>
+
+                      <div className="severity-summary">
+                        {["high", "medium", "low"].map((severity) => (
+                          <div className="severity-count" key={severity}>
+                            <span>{severity}</span>
+                            <strong>
+                              {scan.severity_counts?.[severity] ?? 0}
+                            </strong>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
                   {scan.error_code && (
                     <p className="feedback error">
                       The scan could not complete ({scan.error_code}).
@@ -574,6 +598,60 @@ function App() {
                         : "No findings are available for this scan status."}
                     </p>
                   )}
+
+                  {scan.status === "completed" &&
+                    scan.recommendations?.length > 0 && (
+                      <section
+                        className="recommendations-section"
+                        aria-labelledby="recommendations-heading"
+                      >
+                        <div>
+                          <p className="eyebrow">NEXT STEPS</p>
+                          <h4 id="recommendations-heading">
+                            Cleanup recommendations
+                          </h4>
+                          <p className="muted">
+                            These are advisory actions, not automated fixes.
+                            Verify a finding independently before treating it
+                            as a real exposure.
+                          </p>
+                        </div>
+
+                        <div className="recommendation-list">
+                          {scan.recommendations.map((recommendation, index) => (
+                            <article
+                              className="recommendation-card"
+                              key={`${recommendation.category}-${index}`}
+                            >
+                              <div className="finding-heading">
+                                <strong>{recommendation.title}</strong>
+                                <span
+                                  className={`severity severity-${recommendation.priority}`}
+                                >
+                                  {recommendation.priority} priority
+                                </span>
+                              </div>
+
+                              <ol>
+                                {recommendation.steps.map((step, stepIndex) => (
+                                  <li key={`${index}-${stepIndex}`}>{step}</li>
+                                ))}
+                              </ol>
+
+                              <p className="finding-source">
+                                {recommendation.advisory_only
+                                  ? "Advisory only"
+                                  : "Recommendation"}
+                                {" · "}
+                                Simulated: {String(recommendation.simulated)}
+                                {" · "}
+                                Verified: {String(recommendation.verified)}
+                              </p>
+                            </article>
+                          ))}
+                        </div>
+                      </section>
+                    )}
 
                   <button
                     className="secondary-button"
