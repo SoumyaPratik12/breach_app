@@ -104,6 +104,20 @@ def test_scan_results_are_simulated_and_persisted(
     assert all(item["simulated"] is True for item in scan["findings"])
     assert all(item["verified"] is False for item in scan["findings"])
     assert all("Simulated" in item["source"] for item in scan["findings"])
+    assert scan["risk_score"] == 30
+    assert scan["risk_level"] == "medium"
+    assert scan["severity_counts"] == {
+        "low": 1,
+        "medium": 0,
+        "high": 1,
+    }
+    assert len(scan["prioritized_findings"]) == 2
+    assert scan["prioritized_findings"][0]["severity"] == "high"
+    assert all(
+        finding["simulated"] is True
+        and finding["verified"] is False
+        for finding in scan["prioritized_findings"]
+    )
     assert "person@example.com" not in response.text
 
     persisted = db_session.get(ExposureScan, scan["id"])
@@ -227,6 +241,14 @@ def test_scan_succeeds_with_empty_findings(
     data = response.json()
     assert data["status"] == "completed"
     assert data["findings"] == []
+    assert data["risk_score"] == 0
+    assert data["risk_level"] == "none"
+    assert data["severity_counts"] == {
+        "low": 0,
+        "medium": 0,
+        "high": 0,
+    }
+    assert data["prioritized_findings"] == []
 
 
 def test_provider_failure_is_persisted_without_provider_details(
@@ -262,6 +284,8 @@ def test_provider_failure_is_persisted_without_provider_details(
     assert response.json()["status"] == "failed"
     assert response.json()["error_code"] == "provider_error"
     assert response.json()["findings"] == []
+    assert response.json()["risk_score"] is None
+    assert response.json()["risk_level"] == "unavailable"
     assert "sensitive provider diagnostic" not in response.text
     persisted = db_session.get(ExposureScan, response.json()["id"])
     assert persisted is not None
@@ -331,6 +355,8 @@ def test_unexpected_provider_failure_does_not_leak_details(
 
     assert response.status_code == 201
     assert response.json()["status"] == "failed"
+    assert response.json()["risk_score"] is None
+    assert response.json()["risk_level"] == "unavailable"
 
 
 def test_final_scan_commit_failure_rolls_back_and_leaves_scan_recoverable(
