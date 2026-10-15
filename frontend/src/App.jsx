@@ -330,7 +330,10 @@ function App() {
         <span className="header-note">Privacy-first assessment</span>
       </header>
 
-      <main className="hero" id="home">
+      <main
+        className={user ? "dashboard-layout" : "hero"}
+        id="home"
+      >
         <section className="hero-copy">
           <p className="eyebrow">YOUR PRIVACY, YOUR CONTROL</p>
           <h1>
@@ -353,7 +356,10 @@ function App() {
           </p>
         </section>
 
-        <section className="auth-card" aria-labelledby="auth-heading">
+        <section
+          className={user ? "dashboard-card" : "auth-card"}
+          aria-labelledby="auth-heading"
+        >
           {!user ? (
             <>
               <div className="auth-heading">
@@ -427,9 +433,55 @@ function App() {
             <div className="account-panel">
               <div className="success-icon" aria-hidden="true">✓</div>
               <p className="eyebrow">ACCOUNT CONNECTED</p>
-              <h2 id="auth-heading">Your identifier vault</h2>
+              <h2 id="auth-heading">Privacy dashboard</h2>
               <p className="muted">Signed in as {user.email}</p>
 
+              <div className="dashboard-overview">
+                <article className="overview-card">
+                  <span>Saved identifiers</span>
+                  <strong>{identifiers.length}</strong>
+                  <small>In your identifier vault</small>
+                </article>
+
+                <article className="overview-card">
+                  <span>Ownership verified</span>
+                  <strong>
+                    {
+                      identifiers.filter(
+                        (identifier) =>
+                          String(identifier.verification_status).toLowerCase() ===
+                          "verified"
+                      ).length
+                    }
+                    <span className="overview-total"> / {identifiers.length}</span>
+                  </strong>
+                  <small>Verified identifiers</small>
+                </article>
+
+                <article className="overview-card">
+                  <span>Latest scan risk</span>
+                  <strong>
+                    {scan?.status === "completed" && scan.risk_score != null
+                      ? `${scan.risk_score}/100`
+                      : "—"}
+                  </strong>
+                  <small>
+                    {scan?.status === "completed"
+                      ? `Risk level: ${scan.risk_level}`
+                      : "Complete a scan to see the score"}
+                  </small>
+                </article>
+              </div>
+
+              <div className="dashboard-grid">
+                <section className="dashboard-panel">
+                  <div className="dashboard-panel-heading">
+                    <p className="eyebrow">IDENTIFIER VAULT</p>
+                    <h3>Add an identifier</h3>
+                    <p className="muted">
+                      Add only identifiers you own or are authorized to verify.
+                    </p>
+                  </div>
               <form className="identifier-form" onSubmit={handleAddIdentifier}>
                 <label htmlFor="identifier-type">Identifier type</label>
                 <select
@@ -463,6 +515,9 @@ function App() {
                 </button>
               </form>
 
+                </section>
+
+                <section className="dashboard-panel">
               <div className="identifier-list">
                 <h3>Your identifiers</h3>
                 {identifiers.length === 0 ? (
@@ -507,6 +562,8 @@ function App() {
                     );
                   })
                 )}
+              </div>
+                </section>
               </div>
 
               {scan && (

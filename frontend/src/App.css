@@ -725,3 +725,183 @@ form input::placeholder {
     flex: 1;
   }
 }
+
+/* Professional authenticated dashboard */
+.dashboard-layout {
+  display: block;
+  width: min(1440px, 100%);
+  margin: 0 auto;
+  padding: 36px clamp(18px, 4vw, 56px) 56px;
+}
+
+.dashboard-layout .hero-copy {
+  display: none;
+}
+
+.dashboard-card {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dashboard-card .account-panel {
+  width: 100%;
+}
+
+.dashboard-card .account-panel > .success-icon {
+  display: none;
+}
+
+.dashboard-card .account-panel > .eyebrow {
+  margin-bottom: 8px;
+}
+
+.dashboard-card .account-panel > h2 {
+  margin-bottom: 8px;
+  font-size: clamp(28px, 3vw, 38px);
+  letter-spacing: -0.04em;
+}
+
+.dashboard-card .account-panel > .muted {
+  overflow-wrap: anywhere;
+}
+
+.dashboard-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 28px 0;
+}
+
+.overview-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid #e3e8f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgb(25 40 70 / 4%);
+}
+
+.overview-card > span:first-child {
+  color: #667186;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.overview-card > strong {
+  color: #172033;
+  font-size: clamp(25px, 3vw, 34px);
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+}
+
+.overview-card small {
+  color: #778194;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.overview-total {
+  color: #778194;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: start;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.dashboard-panel {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid #e3e8f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgb(25 40 70 / 4%);
+}
+
+.dashboard-panel-heading {
+  margin-bottom: 18px;
+}
+
+.dashboard-panel-heading .eyebrow {
+  margin-bottom: 8px;
+}
+
+.dashboard-panel-heading h3,
+.dashboard-panel .identifier-list h3 {
+  margin: 0 0 8px;
+  color: #172033;
+  font-size: 19px;
+  letter-spacing: -0.025em;
+}
+
+.dashboard-panel .identifier-form {
+  margin-top: 0;
+}
+
+.dashboard-panel .identifier-list {
+  margin-top: 0;
+}
+
+.dashboard-panel .identifier-item {
+  flex-wrap: wrap;
+}
+
+.dashboard-panel .identifier-actions {
+  justify-content: flex-start;
+}
+
+.dashboard-card .scan-results {
+  margin-top: 24px;
+}
+
+.dashboard-card .otp-form {
+  margin-top: 24px;
+}
+
+@media (max-width: 850px) {
+  .dashboard-layout {
+    padding: 28px 20px 40px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-panel {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 560px) {
+  .dashboard-layout {
+    padding: 24px 14px 32px;
+  }
+
+  .dashboard-overview {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin: 22px 0;
+  }
+
+  .overview-card {
+    padding: 18px;
+  }
+
+  .dashboard-panel {
+    padding: 17px;
+  }
+}
