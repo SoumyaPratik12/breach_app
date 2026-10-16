@@ -63,6 +63,21 @@ def test_production_accepts_distinct_configured_secrets():
     assert configured.expose_dev_otp is False
 
 
+@pytest.mark.parametrize("environment", ["", "prodution", "staging"])
+def test_rejects_unsupported_environment(environment):
+    with pytest.raises(
+        ValidationError,
+        match="environment must be dev, prod, or production",
+    ):
+        Settings(environment=environment)
+
+
+def test_normalizes_environment_before_security_checks():
+    configured = Settings(environment=" DEV ")
+
+    assert configured.environment == "dev"
+
+
 @pytest.mark.parametrize("algorithm", ["HS384", "HS512", "none", "invalid"])
 def test_rejects_unsupported_jwt_algorithm(algorithm):
     with pytest.raises(ValueError, match="jwt_algorithm must be HS256"):

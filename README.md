@@ -9,8 +9,8 @@ Help users understand where their verified digital identifiers may have appeared
 ## Core Principles
 
 - Ownership verification before exposure results
-- No plaintext password handling
-- Client-side password k-anonymity
+- No plaintext password persistence
+- HIBP password checks use range-query k-anonymity
 - Licensed/legitimate intelligence sources only
 - Data minimization
 - HMAC-based identifier protection
@@ -45,10 +45,18 @@ Redis, PostgreSQL, Terraform, or AWS services.
 - React/Vite product shell
 - Backend tests and frontend production build
 
-Run the backend from `backend/`:
+Create the backend virtual environment from the repository root if it does not
+already exist:
 
 ```bash
+python3 -m venv .venv
 source .venv/bin/activate
+pip install -r backend/requirements.txt
+```
+
+Run the backend from `backend/` (activate the root virtual environment first):
+
+```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -73,11 +81,48 @@ npm run build
 
 ## Security
 
-Passwords should never enter the backend.
+Account passwords are processed by the backend for authentication and are
+stored as password hashes. The password-exposure endpoint accepts a candidate
+password over the application API and uses it transiently to calculate its
+SHA-1 hash. Only the first five hexadecimal hash characters are sent to the
+Have I Been Pwned Pwned Passwords range API; neither the plaintext password
+nor the full hash is sent to that provider. The application does not
+intentionally persist the candidate password. Use HTTPS and ensure reverse
+proxies and application logging do not capture request bodies. Python does
+not guarantee that immutable password strings are erased from process memory.
+An exposure count is advisory and a zero count is not a guarantee that a
+password is safe.
+
+`POST /password-exposure/check` requires an authenticated bearer token and
+accepts `{"password": "..."}`. The response reports whether the password was
+found and its occurrence count. Provider errors return a generic unavailable
+response. Checks are rate-limited per user in memory; the limit is local to one
+process and resets on restart, so a shared limiter is required for
+multi-worker or multi-instance deployments.
 
 Identifiers are normalized and protected using HMAC where possible.
 
 Raw intelligence-provider responses are not persisted.
+
+For production, set `ENVIRONMENT=production`, keep
+`EXPOSE_DEV_OTP=false`, and provide distinct JWT, OTP-HMAC, identifier-HMAC,
+and Fernet encryption secrets through a deployment secrets manager. Each
+HMAC/JWT secret must be at least 32 characters, and the encryption key must be
+a valid Fernet key. Only `dev`, `prod`, and `production` are accepted
+environment values. Production OTP delivery is not integrated yet, so
+identifier OTP requests return `503` until a delivery provider is configured.
+Do not rotate the identifier encryption key without migrating existing
+encrypted identifiers.
+
+### Production configuration and deployment security
+
+- Set `ENVIRONMENT` explicitly to `production` or `prod` for production deployments. Development configurations may use `dev`.
+- Unknown environment values are rejected. Do not rely on implicit defaults for production security.
+- Configure strong, unique secrets and a valid Fernet encryption key. Do not rotate existing encryption keys without a planned migration, as doing so may make stored encrypted identifiers inaccessible.
+- Development OTP exposure is not supported in production. Configure a real OTP delivery provider before enabling production identifier verification.
+- The current in-memory rate limiter is process-local and resets on restart. Use a shared rate-limiting backend for multi-worker or multi-instance deployments.
+- Ensure application servers, reverse proxies, and error-monitoring systems do not log passwords, OTPs, authorization headers, or request bodies containing sensitive data.
+- Scan results are simulated and must not be represented as verified real-world exposure findings until a real provider is integrated and the response schema supports its results.
 
 ## Phase 3: simulated exposure-scanning foundation
 
@@ -89,24 +134,27 @@ completed or failed lifecycle states.
 
 The only provider is a deterministic mock. Its findings are labelled as
 simulated and unverified, and must not be represented as real exposure data.
-The mock receives no identifier value. Scan submissions are limited per user
-to five requests per 15 minutes by default; configure this with
+The mock receives no identifier value. `ExposureFinding` currently fixes
+`simulated` to true and `verified` to false; revise the schema and response
+handling before enabling a real provider, and do not treat a provider match as
+independently verified exposure. Scan submissions are limited per user to
+five requests per 15 minutes by default; configure this with
 `SCAN_RATE_LIMIT_ATTEMPTS` and `SCAN_RATE_LIMIT_WINDOW_SECONDS`.
 
-The scan rate limiter is in-memory, so its state is local to one application
-process and is lost on restart. It is not a security boundary for multi-worker
-or multi-instance deployments; use a shared store before deploying that way.
+The scan and password-check rate limiters are in-memory, so their state is
+local to one application process and is lost on restart. They are not security
+boundaries for multi-worker or multi-instance deployments; use a shared store
+before deploying that way.
 On application startup, `init_db` creates any missing tables, including
 `exposure_scans`, without deleting existing data. This is table creation only;
 schema changes that require migrations still need a migration process.
 
-If the process stops after persisting a scan as `RUNNING`, the record remains
-in that state until `recover_stale_scans` is explicitly invoked. Recovery is
-not run automatically at application startup, since another worker may still
-be running the scan. In production, invoke it from a single scheduled
-maintenance job using a cutoff older than the provider's enforced maximum run
-time plus a safety margin, and a dedicated database session. Do not enable
-scheduled recovery until provider execution has a defined upper bound.
+At application startup, `recover_stale_scans` marks `RUNNING` scans older than
+15 minutes as interrupted, using a dedicated database session. This assumes
+scan execution cannot legitimately run longer than that timeout; increase the
+cutoff if a future provider has a longer enforced maximum run time. In
+multi-worker deployments, coordinate startup recovery so another worker does
+not have a scan in progress past the configured cutoff.
 
 Scan state commits are rolled back and database exceptions propagated when a
 commit fails. A failure to persist the final result can leave the previously

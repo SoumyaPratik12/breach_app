@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 
 from app.config.settings import settings
 from app.models import User
@@ -13,7 +16,27 @@ from app.services.password_exposure import (
     check_password_exposure,
 )
 
-router = APIRouter(prefix="/password-exposure", tags=["Password Exposure"])
+class PasswordExposureRoute(APIRoute):
+    def get_route_handler(self):
+        original_handler = super().get_route_handler()
+
+        async def route_handler(request: Request) -> Response:
+            try:
+                return await original_handler(request)
+            except RequestValidationError:
+                return JSONResponse(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    content={"detail": "Invalid password check request"},
+                )
+
+        return route_handler
+
+
+router = APIRouter(
+    prefix="/password-exposure",
+    tags=["Password Exposure"],
+    route_class=PasswordExposureRoute,
+)
 
 password_check_rate_limiter = InMemoryRateLimiter(
     max_attempts=settings.scan_rate_limit_attempts,

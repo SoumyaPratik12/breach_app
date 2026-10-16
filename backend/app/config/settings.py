@@ -31,10 +31,16 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_security_configuration(self):
+        environment = self.environment.strip().lower()
+        if environment not in {"dev", "prod", "production"}:
+            raise ValueError(
+                "environment must be dev, prod, or production"
+            )
+        self.environment = environment
+
         if self.jwt_algorithm != "HS256":
             raise ValueError("jwt_algorithm must be HS256")
 
-        environment = self.environment.strip().lower()
         if environment in {"prod", "production"}:
             if self.expose_dev_otp:
                 raise ValueError(

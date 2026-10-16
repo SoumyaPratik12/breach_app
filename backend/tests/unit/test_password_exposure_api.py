@@ -34,6 +34,22 @@ def test_password_check_requires_authentication(client):
     assert response.status_code == 401
 
 
+def test_password_check_validation_error_does_not_echo_password(client):
+    marker = "PRIVATE_PASSWORD_MARKER"
+    password = marker + "x" * 1024
+    headers = register_and_authenticate(client)
+
+    response = client.post(
+        "/password-exposure/check",
+        headers=headers,
+        json={"password": password},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Invalid password check request"
+    assert marker not in response.text
+
+
 def test_password_check_returns_exposure_result_without_password(
     client,
     monkeypatch,
