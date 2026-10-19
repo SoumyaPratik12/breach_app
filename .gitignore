@@ -29,3 +29,6 @@ Thumbs.db
 
 # Local application database and data
 /backend/data/
+
+# Local Python recovery environment
+backend/.venv-recovery/
