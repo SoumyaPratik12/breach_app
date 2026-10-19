@@ -145,6 +145,33 @@ The scan and password-check rate limiters are in-memory, so their state is
 local to one application process and is lost on restart. They are not security
 boundaries for multi-worker or multi-instance deployments; use a shared store
 before deploying that way.
+
+### Privacy risk analysis
+
+Authenticated users can request `GET /risk-analysis` to see an aggregate of
+their own completed scans associated with currently verified identifiers.
+Other users' data, unverified identifiers, and pending, running, or failed
+scans are excluded. If there are no eligible completed scans, the API returns
+`status: "insufficient_data"` with no score or findings.
+
+The analysis reuses the deterministic risk scoring and recommendation
+functions. It is an explainable heuristic: low, medium, and high findings
+contribute 5, 15, and 25 points respectively; points are summed across
+eligible scans and capped at 100, then mapped to the existing risk categories.
+Scores map to `none` at 0, `low` at 1–24, `medium` at 25–49, `high` at
+50–74, and `critical` at 75–100.
+Contributing factors aggregate counts by finding category and severity.
+Recommendations are advisory guidance, and the analysis returns at most three
+distinct recommendation categories.
+
+This is not a trained or validated AI prediction model, and no identifiers or
+scan data are sent to external AI services. The current scans and findings are
+simulated mock data; the analysis labels that status and does not establish
+real-world exposure. Results depend on configured scan coverage, do not
+guarantee safety when no findings are present, and should not be treated as a
+verified assessment. The dashboard displays methodology, limitations,
+simulated status, and advisory recommendations.
+
 On application startup, `init_db` creates any missing tables, including
 `exposure_scans`, without deleting existing data. This is table creation only;
 schema changes that require migrations still need a migration process.

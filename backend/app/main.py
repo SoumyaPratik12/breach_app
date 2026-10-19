@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from app.api.auth import router as auth_router
 from app.api.identifiers import router as identifiers_router
 from app.api.password_exposure import router as password_exposure_router
+from app.api.risk_analysis import router as risk_analysis_router
 from app.api.scans import router as scans_router
 from app.db.database import SessionLocal
 from app.db.init_db import init_db
@@ -42,6 +43,7 @@ app.include_router(auth_router)
 app.include_router(identifiers_router)
 app.include_router(password_exposure_router)
 app.include_router(scans_router)
+app.include_router(risk_analysis_router)
 
 
 @app.get("/health")

@@ -832,6 +832,134 @@ form input::placeholder {
   box-shadow: 0 4px 18px rgb(25 40 70 / 4%);
 }
 
+.risk-analysis-panel {
+  margin-bottom: 20px;
+}
+
+.risk-analysis-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.risk-analysis-header .dashboard-panel-heading {
+  margin-bottom: 18px;
+}
+
+.risk-analysis-header .dashboard-panel-heading h3 {
+  margin: 0 0 8px;
+}
+
+.risk-analysis-empty {
+  margin: 0;
+  padding: 14px;
+  border-radius: 9px;
+  background: #f3f6fb;
+  color: #596579;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.risk-analysis-summary {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.55fr) minmax(0, 1.45fr);
+  gap: 18px;
+  margin: 18px 0;
+}
+
+.risk-analysis-score {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 9px;
+  padding: 17px;
+  border: 1px solid #e3e8f0;
+  border-radius: 10px;
+  background: #f9fbfe;
+}
+
+.risk-analysis-score strong {
+  font-size: 29px;
+  letter-spacing: -0.04em;
+}
+
+.risk-analysis-score small {
+  color: #778194;
+  font-size: 11px;
+}
+
+.risk-analysis-summary h4,
+.risk-analysis-recommendations h4 {
+  margin: 0 0 10px;
+  color: #303b4f;
+  font-size: 14px;
+}
+
+.risk-factor-list {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.risk-factor-list li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid #e8ecf2;
+  border-radius: 8px;
+  color: #596579;
+  font-size: 12px;
+}
+
+.risk-factor-list li > span:first-child {
+  flex: 1;
+  text-transform: capitalize;
+}
+
+.risk-factor-list strong {
+  color: #303b4f;
+}
+
+.risk-analysis-recommendations {
+  margin: 20px 0;
+}
+
+.risk-analysis-recommendations .recommendation-list {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.risk-analysis-recommendations .recommendation-card {
+  padding: 12px;
+}
+
+.risk-analysis-methodology {
+  padding-top: 14px;
+  border-top: 1px solid #e8ecf2;
+  color: #596579;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.risk-analysis-methodology summary {
+  color: #303b4f;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.risk-analysis-methodology p {
+  margin: 10px 0;
+}
+
+.risk-analysis-methodology ul {
+  display: grid;
+  gap: 5px;
+  padding-left: 20px;
+}
+
 .dashboard-panel-heading {
   margin-bottom: 18px;
 }
@@ -884,6 +1012,10 @@ form input::placeholder {
   .dashboard-panel {
     padding: 20px;
   }
+
+  .risk-analysis-summary {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 560px) {
@@ -903,5 +1035,9 @@ form input::placeholder {
 
   .dashboard-panel {
     padding: 17px;
+  }
+
+  .risk-analysis-header {
+    flex-direction: column;
   }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 
 const TOKEN_KEY = "dfsa_access_token";
@@ -52,6 +52,10 @@ function App() {
   const [otpExpiresAt, setOtpExpiresAt] = useState("");
   const [scan, setScan] = useState(null);
   const [scanLoading, setScanLoading] = useState(false);
+  const [riskAnalysis, setRiskAnalysis] = useState(null);
+  const [riskAnalysisLoading, setRiskAnalysisLoading] = useState(true);
+  const [riskAnalysisError, setRiskAnalysisError] = useState("");
+  const riskAnalysisRequestId = useRef(0);
 
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -118,6 +122,60 @@ function App() {
     };
   }, [user, token]);
 
+  const loadRiskAnalysis = useCallback(async () => {
+    if (!token) return;
+
+    const requestId = ++riskAnalysisRequestId.current;
+    setRiskAnalysisLoading(true);
+    setRiskAnalysisError("");
+    try {
+      const data = await apiRequest("/risk-analysis", {}, token);
+      if (requestId === riskAnalysisRequestId.current) {
+        setRiskAnalysis(data);
+      }
+    } catch (requestError) {
+      if (requestId === riskAnalysisRequestId.current) {
+        setRiskAnalysisError(
+          requestError.message || "Could not load privacy risk analysis."
+        );
+      }
+    } finally {
+      if (requestId === riskAnalysisRequestId.current) {
+        setRiskAnalysisLoading(false);
+      }
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!user || !token) return undefined;
+
+    const requestId = ++riskAnalysisRequestId.current;
+    apiRequest("/risk-analysis", {}, token)
+      .then((data) => {
+        if (requestId === riskAnalysisRequestId.current) {
+          setRiskAnalysis(data);
+        }
+      })
+      .catch((requestError) => {
+        if (requestId === riskAnalysisRequestId.current) {
+          setRiskAnalysisError(
+            requestError.message || "Could not load privacy risk analysis."
+          );
+        }
+      })
+      .finally(() => {
+        if (requestId === riskAnalysisRequestId.current) {
+          setRiskAnalysisLoading(false);
+        }
+      });
+
+    return () => {
+      if (requestId === riskAnalysisRequestId.current) {
+        riskAnalysisRequestId.current += 1;
+      }
+    };
+  }, [user, token]);
+
   function clearFeedback() {
     setMessage("");
     setError("");
@@ -141,6 +199,7 @@ function App() {
       });
 
       sessionStorage.setItem(TOKEN_KEY, result.access_token);
+      setRiskAnalysisLoading(true);
       setToken(result.access_token);
       setPassword("");
 
@@ -244,6 +303,7 @@ function App() {
       setSelectedIdentifierId(null);
       setOtpExpiresAt("");
       setMessage(result.message || "Identifier verified successfully.");
+      await loadRiskAnalysis();
     } catch (requestError) {
       setError(requestError.message || "OTP verification failed.");
     } finally {
@@ -265,6 +325,7 @@ function App() {
 
       setScan(result);
       setMessage("Scan finished. Review the simulated findings below.");
+      await loadRiskAnalysis();
     } catch (requestError) {
       setError(requestError.message || "Could not start the scan.");
     } finally {
@@ -290,17 +351,21 @@ function App() {
   }
 
   function handleLogout() {
+    riskAnalysisRequestId.current += 1;
     sessionStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);
     setIdentifiers([]);
     setScan(null);
+    setRiskAnalysis(null);
+    setRiskAnalysisLoading(false);
     setEmail("");
     setPassword("");
     setIdentifierValue("");
     setOtp("");
     setDevOtp("");
     setSelectedIdentifierId(null);
+    setRiskAnalysisError("");
     setMode("login");
     setMessage("You have been logged out.");
     setError("");
@@ -472,6 +537,153 @@ function App() {
                   </small>
                 </article>
               </div>
+
+              <section
+                className="dashboard-panel risk-analysis-panel"
+                aria-labelledby="risk-analysis-heading"
+              >
+                <div className="risk-analysis-header">
+                  <div className="dashboard-panel-heading">
+                    <p className="eyebrow">PRIVACY RISK ANALYSIS</p>
+                    <h3 id="risk-analysis-heading">Your overall risk snapshot</h3>
+                    <p className="muted">
+                      An explainable heuristic based on your verified
+                      identifiers’ completed scans—not a trained or validated
+                      AI prediction.
+                    </p>
+                  </div>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={loadRiskAnalysis}
+                    disabled={riskAnalysisLoading}
+                  >
+                    {riskAnalysisLoading ? "Loading…" : "Refresh analysis"}
+                  </button>
+                </div>
+
+                {riskAnalysisLoading && (
+                  <p className="muted" role="status">
+                    Loading your privacy risk analysis…
+                  </p>
+                )}
+
+                {!riskAnalysisLoading && riskAnalysisError && (
+                  <p className="feedback error" role="alert">
+                    {riskAnalysisError}
+                  </p>
+                )}
+
+                {!riskAnalysisLoading &&
+                  !riskAnalysisError &&
+                  riskAnalysis?.status === "insufficient_data" && (
+                    <p className="risk-analysis-empty">
+                      There is not enough data yet. Verify an identifier and
+                      complete a scan to generate an analysis.
+                    </p>
+                  )}
+
+                {!riskAnalysisLoading &&
+                  !riskAnalysisError &&
+                  riskAnalysis?.status === "ready" && (
+                    <>
+                      {riskAnalysis.simulated && (
+                        <div className="simulation-notice" role="note">
+                          <strong>Simulated findings</strong>
+                          <p>
+                            This analysis uses simulated scan data. It does
+                            not confirm real-world exposure.
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="risk-analysis-summary">
+                        <div className="risk-analysis-score">
+                          <span className="muted">Heuristic risk score</span>
+                          <strong>{riskAnalysis.risk_score} / 100</strong>
+                          <span
+                            className={`risk-level risk-${riskAnalysis.risk_category}`}
+                          >
+                            {riskAnalysis.risk_category}
+                          </span>
+                          <small>
+                            Based on {riskAnalysis.scans_analyzed} completed{" "}
+                            {riskAnalysis.scans_analyzed === 1 ? "scan" : "scans"}
+                          </small>
+                        </div>
+
+                        <div>
+                          <h4>Contributing factors</h4>
+                          {riskAnalysis.contributing_factors.length ? (
+                            <ul className="risk-factor-list">
+                              {riskAnalysis.contributing_factors.map(
+                                (factor, index) => (
+                                  <li key={`${factor.category}-${factor.severity}-${index}`}>
+                                    <span>
+                                      {factor.category.replaceAll("_", " ")}
+                                    </span>
+                                    <span
+                                      className={`severity severity-${factor.severity}`}
+                                    >
+                                      {factor.severity}
+                                    </span>
+                                    <strong>×{factor.count}</strong>
+                                  </li>
+                                )
+                              )}
+                            </ul>
+                          ) : (
+                            <p className="muted">
+                              No findings were recorded in completed scans.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="risk-analysis-recommendations">
+                        <h4>Advisory recommendations</h4>
+                        {riskAnalysis.recommendations.length ? (
+                          <div className="recommendation-list">
+                            {riskAnalysis.recommendations.map(
+                              (recommendation, index) => (
+                                <article
+                                  className="recommendation-card"
+                                  key={`${recommendation.category}-${index}`}
+                                >
+                                  <div className="finding-heading">
+                                    <strong>{recommendation.title}</strong>
+                                    <span className="severity">
+                                      Advisory only
+                                    </span>
+                                  </div>
+                                  <ol>
+                                    {recommendation.steps.map((step, stepIndex) => (
+                                      <li key={`${index}-${stepIndex}`}>{step}</li>
+                                    ))}
+                                  </ol>
+                                </article>
+                              )
+                            )}
+                          </div>
+                        ) : (
+                          <p className="muted">
+                            There are no recommendations for the recorded findings.
+                          </p>
+                        )}
+                      </div>
+
+                      <details className="risk-analysis-methodology">
+                        <summary>Methodology and limitations</summary>
+                        <p>{riskAnalysis.methodology}</p>
+                        <ul>
+                          {riskAnalysis.limitations.map((limitation) => (
+                            <li key={limitation}>{limitation}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    </>
+                  )}
+              </section>
 
               <div className="dashboard-grid">
                 <section className="dashboard-panel">
